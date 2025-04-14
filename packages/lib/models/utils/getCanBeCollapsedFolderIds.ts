@@ -16,19 +16,27 @@ export default (folders: FolderEntity[]) => {
 		}
 	};
 
-	// Future proofing: if TrashFolder is already in canBeCollapsedIds do not add it again.
-	if (!(getTrashFolderId() in canBeCollapsedIds)) {
+	processTree(tree);
 
-		// Currently only deleted folders result in a collapsable Trash
+	// Logic to determine whether trash should be included in canBeCollapsedIds
+	// Loops over all folders recursively in case in the future a deleted folder remains child of a not deleted folder (and hence there is no deleted folder in 'tree').
+	const isTrashCollapsable = (folders: FolderEntityWithChildren[]) => {
 		for (const folder of folders) {
 			if (folder.deleted_time) {
 				canBeCollapsedIds.push(getTrashFolderId());
-				break;
+				return;
+			}
+
+			if (folder.children.length) {
+				isTrashCollapsable(folder.children);
 			}
 		}
-	}
+	};
 
-	processTree(tree);
+	// Future proofing: if TrashFolder is already in canBeCollapsedIds do not add it again.
+	if (!(getTrashFolderId() in canBeCollapsedIds)) {
+		isTrashCollapsable(tree);
+	}
 
 	return canBeCollapsedIds;
 };
